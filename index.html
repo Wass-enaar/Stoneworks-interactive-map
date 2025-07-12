@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BIG MAP Fullscreen with Pixel Coordinates Picker</title>
+  <title>BIG MAP with Polygon & Flag Hover</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -10,17 +10,24 @@
     href="https://unpkg.com/leaflet/dist/leaflet.css"
   />
   <style>
-    /* Make sure html and body take full height and remove margin */
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
     }
-    /* Map container takes full viewport */
     #map {
       height: 100%;
       width: 100%;
       display: block;
+    }
+    /* Style popup to remove background & border for the flag */
+    .flag-popup .leaflet-popup-content-wrapper {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    .flag-popup .leaflet-popup-tip {
+      display: none;
     }
   </style>
 </head>
@@ -44,8 +51,8 @@
   L.imageOverlay('BIG MAP.png', bounds).addTo(map);
   map.fitBounds(bounds);
 
+  // Click to add marker with pixel coordinates popup
   let currentMarker = null;
-
   map.on('click', function(e) {
     const pixelX = e.latlng.lng.toFixed(0);
     const pixelY = e.latlng.lat.toFixed(0);
@@ -56,6 +63,33 @@
 
     currentMarker = L.marker(e.latlng).addTo(map);
     currentMarker.bindPopup(`Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}`).openPopup();
+  });
+
+  // Polygon coordinates (converted to [lat, lng] = [Y, X])
+  const polygonCoords = [
+    [1799, 18656],
+    [678, 17086],
+    [2387, 16486],
+    [3324, 18656]
+  ];
+
+  const polygon = L.polygon(polygonCoords, {color: 'blue'}).addTo(map);
+
+  // Popup with flag image for hover
+  const flagPopup = L.popup({
+    closeButton: false,
+    autoClose: false,
+    closeOnEscapeKey: false,
+    closeOnClick: false,
+    className: 'flag-popup'
+  }).setContent('<img src="flag.gif" style="width:80px; height:auto;" />'); // change 'flag.gif' to your flag image path
+
+  polygon.on('mouseover', function(e) {
+    flagPopup.setLatLng(e.latlng).openOn(map);
+  });
+
+  polygon.on('mouseout', function() {
+    map.closePopup(flagPopup);
   });
 </script>
 
