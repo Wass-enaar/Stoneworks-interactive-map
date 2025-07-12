@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BIG MAP with Pixel Coordinates Picker</title>
+  <title>BIG MAP Fullscreen with Pixel Coordinates Picker</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -10,7 +10,18 @@
     href="https://unpkg.com/leaflet/dist/leaflet.css"
   />
   <style>
-    #map { height: 600px; width: 100%; }
+    /* Make sure html and body take full height and remove margin */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    /* Map container takes full viewport */
+    #map {
+      height: 100%;
+      width: 100%;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -19,11 +30,9 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-  // Your BIG MAP dimensions
   const mapWidth = 18657;
   const mapHeight = 18658;
 
-  // Initialize Leaflet map with Simple CRS (pixel coords)
   const map = L.map('map', {
     crs: L.CRS.Simple,
     minZoom: -5,
@@ -31,33 +40,21 @@
     zoomSnap: 0.1
   });
 
-  // Set image bounds exactly matching your PNG pixels: [top-left, bottom-right]
   const bounds = [[0, 0], [mapHeight, mapWidth]];
-
-  // Add your big map image overlay
   L.imageOverlay('BIG MAP.png', bounds).addTo(map);
-
-  // Fit the map view to the image bounds
   map.fitBounds(bounds);
 
-  // Track current marker to allow only one marker at a time
   let currentMarker = null;
 
-  // Click event: add marker and show pixel coordinates popup
   map.on('click', function(e) {
-    // Leaflet Simple CRS lat = Y pixel, lng = X pixel
     const pixelX = e.latlng.lng.toFixed(0);
     const pixelY = e.latlng.lat.toFixed(0);
 
-    // Remove previous marker
     if (currentMarker) {
       map.removeLayer(currentMarker);
     }
 
-    // Add new marker at clicked point
     currentMarker = L.marker(e.latlng).addTo(map);
-
-    // Bind popup showing pixel coordinates (X, Y)
     currentMarker.bindPopup(`Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}`).openPopup();
   });
 </script>
