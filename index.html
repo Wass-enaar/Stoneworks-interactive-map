@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BIG MAP with Polygon Hover Flag GIF Fill</title>
+  <title>BIG MAP with Polygon Hover Flag GIF Fill and Click Link</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -86,24 +86,25 @@
     interactive: true
   }).addTo(map);
 
+  // Add click event to open Wikipedia link
+  polygon.on('click', function() {
+    window.open('https://en.wikipedia.org/wiki/Kingdom_of_the_Netherlands', '_blank');
+  });
+
   // Container for the overlay div
   let flagDiv = null;
 
   function latLngToLayerPointArray(latlngs) {
-    // Converts array of LatLng to array of layer points for positioning
     return latlngs.map(function(latlng) {
       return map.latLngToLayerPoint(latlng);
     });
   }
 
   function createFlagOverlay(polygon) {
-    // Get container for map panes
     const mapPane = map.getPane('overlayPane');
 
-    // Get pixel positions of polygon points relative to map container
     const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
 
-    // Calculate bounding box of polygon in pixels
     let minX = layerPoints[0].x;
     let minY = layerPoints[0].y;
     let maxX = layerPoints[0].x;
@@ -119,19 +120,16 @@
     const width = maxX - minX;
     const height = maxY - minY;
 
-    // Build clip-path polygon string (coordinates relative to the overlay div)
     const clipPathPoints = layerPoints.map(pt => {
       const x = pt.x - minX;
       const y = pt.y - minY;
       return `${x}px ${y}px`;
     }).join(', ');
 
-    // Create div if not exists
     if (!flagDiv) {
       flagDiv = L.DomUtil.create('div', 'flag-overlay', mapPane);
     }
 
-    // Style and position the div
     flagDiv.style.left = minX + 'px';
     flagDiv.style.top = minY + 'px';
     flagDiv.style.width = width + 'px';
@@ -144,7 +142,6 @@
   function removeFlagOverlay() {
     if (flagDiv) {
       flagDiv.style.opacity = '0';
-      // Optionally remove from DOM after fade-out
       setTimeout(() => {
         if (flagDiv && flagDiv.parentNode) {
           flagDiv.parentNode.removeChild(flagDiv);
@@ -154,17 +151,14 @@
     }
   }
 
-  // Show flag overlay on hover
   polygon.on('mouseover', function() {
     createFlagOverlay(polygon);
   });
 
-  // Hide flag overlay on mouseout
   polygon.on('mouseout', function() {
     removeFlagOverlay();
   });
 
-  // Also update overlay position on zoom/pan for correctness
   map.on('zoom move', function() {
     if (flagDiv) {
       createFlagOverlay(polygon);
