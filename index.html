@@ -36,6 +36,13 @@
     const marker = L.marker([400, 500]).addTo(map)
       .bindPopup("Marker Test");
 
+    map.on('click', function(e) {
+  const coords = e.latlng; // Leaflet gives lat/lng, which is y/x in Simple CRS
+  const popup = L.popup()
+    .setLatLng(coords)
+    .setContent(`Pixel coordinates:<br>Y: ${coords.lat.toFixed(0)}<br>X: ${coords.lng.toFixed(0)}`)
+    .openOn(map);
+});
   </script>
 </body>
 </html>
