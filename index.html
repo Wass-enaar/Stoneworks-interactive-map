@@ -22,15 +22,14 @@
       position: relative;
     }
 
-    /* The div that will hold the flag GIF on hover */
     .flag-overlay {
       position: absolute;
-      pointer-events: none; /* Let mouse events pass through */
-      background-image: url('flag.gif'); /* Your flag GIF */
+      pointer-events: none;
+      background-image: url('flag.gif'); /* Replace with your actual flag file */
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
-      z-index: 1000; /* on top */
+      z-index: 1000;
       transition: opacity 0.3s ease;
       opacity: 0.9;
     }
@@ -56,7 +55,6 @@
   L.imageOverlay('BIG MAP.png', bounds).addTo(map);
   map.fitBounds(bounds);
 
-  // Click to add marker with pixel coordinates popup
   let currentMarker = null;
   map.on('click', function(e) {
     const pixelX = e.latlng.lng.toFixed(0);
@@ -70,7 +68,6 @@
     currentMarker.bindPopup(`Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}`).openPopup();
   });
 
-  // Polygon coordinates (converted to [lat, lng] = [Y, X])
   const polygonCoords = [
     [1799, 18656],
     [678, 17086],
@@ -78,7 +75,6 @@
     [3324, 18656]
   ];
 
-  // Invisible polygon but still interactive
   const polygon = L.polygon(polygonCoords, {
     color: 'blue',
     fillOpacity: 0,
@@ -86,12 +82,10 @@
     interactive: true
   }).addTo(map);
 
-  // Add click event to open Wikipedia link
   polygon.on('click', function() {
     window.open('https://en.wikipedia.org/wiki/Kingdom_of_the_Netherlands', '_blank');
   });
 
-  // Container for the overlay div
   let flagDiv = null;
 
   function latLngToLayerPointArray(latlngs) {
@@ -152,6 +146,12 @@
   }
 
   polygon.on('mouseover', function() {
+    // Remove marker when hovering over polygon
+    if (currentMarker) {
+      map.removeLayer(currentMarker);
+      currentMarker = null;
+    }
+
     createFlagOverlay(polygon);
   });
 
@@ -164,7 +164,6 @@
       createFlagOverlay(polygon);
     }
   });
-
 </script>
 
 </body>
