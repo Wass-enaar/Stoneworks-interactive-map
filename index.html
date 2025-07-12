@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BIG MAP with Polygon & Flag Hover</title>
+  <title>BIG MAP with Polygon Hover Flag GIF Fill</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -19,15 +19,20 @@
       height: 100%;
       width: 100%;
       display: block;
+      position: relative;
     }
-    /* Style popup to remove background & border for the flag */
-    .flag-popup .leaflet-popup-content-wrapper {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-    }
-    .flag-popup .leaflet-popup-tip {
-      display: none;
+
+    /* The div that will hold the flag GIF on hover */
+    .flag-overlay {
+      position: absolute;
+      pointer-events: none; /* Let mouse events pass through */
+      background-image: url('flag.gif'); /* Your flag GIF */
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 1000; /* on top */
+      transition: opacity 0.3s ease;
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -73,24 +78,99 @@
     [3324, 18656]
   ];
 
-  const polygon = L.polygon(polygonCoords, {color: 'blue'}).addTo(map);
+  // Invisible polygon but still interactive
+  const polygon = L.polygon(polygonCoords, {
+    color: 'blue',
+    fillOpacity: 0,
+    opacity: 0,
+    interactive: true
+  }).addTo(map);
 
-  // Popup with flag image for hover
-  const flagPopup = L.popup({
-    closeButton: false,
-    autoClose: false,
-    closeOnEscapeKey: false,
-    closeOnClick: false,
-    className: 'flag-popup'
-  }).setContent('<img src="flag.gif" style="width:80px; height:auto;" />'); // change 'flag.gif' to your flag image path
+  // Container for the overlay div
+  let flagDiv = null;
 
-  polygon.on('mouseover', function(e) {
-    flagPopup.setLatLng(e.latlng).openOn(map);
+  function latLngToLayerPointArray(latlngs) {
+    // Converts array of LatLng to array of layer points for positioning
+    return latlngs.map(function(latlng) {
+      return map.latLngToLayerPoint(latlng);
+    });
+  }
+
+  function createFlagOverlay(polygon) {
+    // Get container for map panes
+    const mapPane = map.getPane('overlayPane');
+
+    // Get pixel positions of polygon points relative to map container
+    const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
+
+    // Calculate bounding box of polygon in pixels
+    let minX = layerPoints[0].x;
+    let minY = layerPoints[0].y;
+    let maxX = layerPoints[0].x;
+    let maxY = layerPoints[0].y;
+
+    layerPoints.forEach(pt => {
+      if (pt.x < minX) minX = pt.x;
+      if (pt.y < minY) minY = pt.y;
+      if (pt.x > maxX) maxX = pt.x;
+      if (pt.y > maxY) maxY = pt.y;
+    });
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    // Build clip-path polygon string (coordinates relative to the overlay div)
+    const clipPathPoints = layerPoints.map(pt => {
+      const x = pt.x - minX;
+      const y = pt.y - minY;
+      return `${x}px ${y}px`;
+    }).join(', ');
+
+    // Create div if not exists
+    if (!flagDiv) {
+      flagDiv = L.DomUtil.create('div', 'flag-overlay', mapPane);
+    }
+
+    // Style and position the div
+    flagDiv.style.left = minX + 'px';
+    flagDiv.style.top = minY + 'px';
+    flagDiv.style.width = width + 'px';
+    flagDiv.style.height = height + 'px';
+    flagDiv.style.clipPath = `polygon(${clipPathPoints})`;
+    flagDiv.style.WebkitClipPath = `polygon(${clipPathPoints})`;
+    flagDiv.style.opacity = '0.9';
+  }
+
+  function removeFlagOverlay() {
+    if (flagDiv) {
+      flagDiv.style.opacity = '0';
+      // Optionally remove from DOM after fade-out
+      setTimeout(() => {
+        if (flagDiv && flagDiv.parentNode) {
+          flagDiv.parentNode.removeChild(flagDiv);
+          flagDiv = null;
+        }
+      }, 300);
+    }
+  }
+
+  // Show flag overlay on hover
+  polygon.on('mouseover', function() {
+    createFlagOverlay(polygon);
   });
 
+  // Hide flag overlay on mouseout
   polygon.on('mouseout', function() {
-    map.closePopup(flagPopup);
+    removeFlagOverlay();
   });
+
+  // Also update overlay position on zoom/pan for correctness
+  map.on('zoom move', function() {
+    if (flagDiv) {
+      createFlagOverlay(polygon);
+    }
+  });
+
 </script>
 
 </body>
