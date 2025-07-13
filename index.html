@@ -5,10 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     html, body {
       height: 100%;
@@ -96,7 +93,6 @@
 
   function createFlagOverlay(polygon) {
     const mapPane = map.getPane('overlayPane');
-
     const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
 
     let minX = layerPoints[0].x;
@@ -146,12 +142,10 @@
   }
 
   polygon.on('mouseover', function() {
-    // Remove marker when hovering over polygon
     if (currentMarker) {
       map.removeLayer(currentMarker);
       currentMarker = null;
     }
-
     createFlagOverlay(polygon);
   });
 
@@ -164,6 +158,41 @@
       createFlagOverlay(polygon);
     }
   });
+
+  // ✅ LOAD EXTERNAL GEOJSON FILE
+  fetch('map_polygons.geojson')
+    .then(res => res.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: feature => ({
+          color: 'black',
+          weight: 1,
+          fillOpacity: 0,
+          opacity: 0
+        }),
+        onEachFeature: (feature, layer) => {
+          // Optional: link on click
+          if (feature.properties && feature.properties.link) {
+            layer.on('click', () => {
+              window.open(feature.properties.link, '_blank');
+            });
+          }
+
+          // Optional: hover flag effect
+          layer.on('mouseover', () => {
+            if (currentMarker) {
+              map.removeLayer(currentMarker);
+              currentMarker = null;
+            }
+            createFlagOverlay(layer);
+          });
+
+          layer.on('mouseout', () => {
+            removeFlagOverlay();
+          });
+        }
+      }).addTo(map);
+    });
 </script>
 
 </body>
