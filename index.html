@@ -22,7 +22,6 @@
     .flag-overlay {
       position: absolute;
       pointer-events: none;
-      background-image: url('flag.gif'); /* Replace with your actual flag file */
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
@@ -65,24 +64,6 @@
     currentMarker.bindPopup(`Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}`).openPopup();
   });
 
-  const polygonCoords = [
-    [1799, 18656],
-    [678, 17086],
-    [2387, 16486],
-    [3324, 18656]
-  ];
-
-  const polygon = L.polygon(polygonCoords, {
-    color: 'blue',
-    fillOpacity: 0,
-    opacity: 0,
-    interactive: true
-  }).addTo(map);
-
-  polygon.on('click', function() {
-    window.open('https://en.wikipedia.org/wiki/Kingdom_of_the_Netherlands', '_blank');
-  });
-
   let flagDiv = null;
 
   function latLngToLayerPointArray(latlngs) {
@@ -91,7 +72,7 @@
     });
   }
 
-  function createFlagOverlay(polygon) {
+  function createFlagOverlay(polygon, flagUrl) {
     const mapPane = map.getPane('overlayPane');
     const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
 
@@ -126,6 +107,7 @@
     flagDiv.style.height = height + 'px';
     flagDiv.style.clipPath = `polygon(${clipPathPoints})`;
     flagDiv.style.WebkitClipPath = `polygon(${clipPathPoints})`;
+    flagDiv.style.backgroundImage = `url('${flagUrl}')`;
     flagDiv.style.opacity = '0.9';
   }
 
@@ -141,21 +123,13 @@
     }
   }
 
-  polygon.on('mouseover', function() {
-    if (currentMarker) {
-      map.removeLayer(currentMarker);
-      currentMarker = null;
-    }
-    createFlagOverlay(polygon);
-  });
-
-  polygon.on('mouseout', function() {
-    removeFlagOverlay();
-  });
-
   map.on('zoom move', function() {
-    if (flagDiv) {
-      createFlagOverlay(polygon);
+    if (flagDiv && flagDiv.polygon) {
+      const feature = flagDiv.feature;
+      const flagUrl = feature && feature.properties.name === 'Osentar Gexico'
+        ? 'Osentar_flag.gif'
+        : 'flag.gif';
+      createFlagOverlay(flagDiv.polygon, flagUrl);
     }
   });
 
@@ -178,13 +152,23 @@
             });
           }
 
-          // Optional: hover flag effect
+          // Hover flag effect
           layer.on('mouseover', () => {
             if (currentMarker) {
               map.removeLayer(currentMarker);
               currentMarker = null;
             }
-            createFlagOverlay(layer);
+
+            const flagUrl = feature.properties.name === 'Osentar Gexico'
+              ? 'Osentar_flag.gif'
+              : 'flag.gif'; // fallback if needed
+
+            // Track feature for zoom/move redraw
+            if (!flagDiv) flagDiv = {};
+            flagDiv.feature = feature;
+            flagDiv.polygon = layer;
+
+            createFlagOverlay(layer, flagUrl);
           });
 
           layer.on('mouseout', () => {
