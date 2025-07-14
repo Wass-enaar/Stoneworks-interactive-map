@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Map with Osentar Gexico Flag</title>
+  <title>BIG MAP with Polygon Hover Flag GIF Fill and Click Link</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -10,22 +10,25 @@
     html, body {
       height: 100%;
       margin: 0;
+      padding: 0;
     }
-
     #map {
       height: 100%;
       width: 100%;
+      display: block;
+      position: relative;
     }
 
     .flag-overlay {
       position: absolute;
       pointer-events: none;
+      background-image: url('flag.gif'); /* Replace with your actual flag file */
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center;
       z-index: 1000;
-      opacity: 0.9;
       transition: opacity 0.3s ease;
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -50,19 +53,52 @@
   map.fitBounds(bounds);
 
   let currentMarker = null;
+  map.on('click', function(e) {
+    const pixelX = e.latlng.lng.toFixed(0);
+    const pixelY = e.latlng.lat.toFixed(0);
+
+    if (currentMarker) {
+      map.removeLayer(currentMarker);
+    }
+
+    currentMarker = L.marker(e.latlng).addTo(map);
+    currentMarker.bindPopup(Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}).openPopup();
+  });
+
+  const polygonCoords = [
+    [1799, 18656],
+    [678, 17086],
+    [2387, 16486],
+    [3324, 18656]
+  ];
+
+  const polygon = L.polygon(polygonCoords, {
+    color: 'blue',
+    fillOpacity: 0,
+    opacity: 0,
+    interactive: true
+  }).addTo(map);
+
+  polygon.on('click', function() {
+    window.open('https://en.wikipedia.org/wiki/Kingdom_of_the_Netherlands', '_blank');
+  });
+
   let flagDiv = null;
-  let activePolygon = null;
 
   function latLngToLayerPointArray(latlngs) {
-    return latlngs.map(latlng => map.latLngToLayerPoint(latlng));
+    return latlngs.map(function(latlng) {
+      return map.latLngToLayerPoint(latlng);
+    });
   }
 
-  function createFlagOverlay(polygon, flagUrl) {
+  function createFlagOverlay(polygon) {
     const mapPane = map.getPane('overlayPane');
     const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
 
-    let minX = layerPoints[0].x, minY = layerPoints[0].y;
-    let maxX = minX, maxY = minY;
+    let minX = layerPoints[0].x;
+    let minY = layerPoints[0].y;
+    let maxX = layerPoints[0].x;
+    let maxY = layerPoints[0].y;
 
     layerPoints.forEach(pt => {
       if (pt.x < minX) minX = pt.x;
@@ -75,20 +111,21 @@
     const height = maxY - minY;
 
     const clipPathPoints = layerPoints.map(pt => {
-      return `${pt.x - minX}px ${pt.y - minY}px`;
+      const x = pt.x - minX;
+      const y = pt.y - minY;
+      return ${x}px ${y}px;
     }).join(', ');
 
     if (!flagDiv) {
       flagDiv = L.DomUtil.create('div', 'flag-overlay', mapPane);
     }
 
-    flagDiv.style.left = `${minX}px`;
-    flagDiv.style.top = `${minY}px`;
-    flagDiv.style.width = `${width}px`;
-    flagDiv.style.height = `${height}px`;
-    flagDiv.style.backgroundImage = `url(${flagUrl})`;
-    flagDiv.style.clipPath = `polygon(${clipPathPoints})`;
-    flagDiv.style.WebkitClipPath = `polygon(${clipPathPoints})`;
+    flagDiv.style.left = minX + 'px';
+    flagDiv.style.top = minY + 'px';
+    flagDiv.style.width = width + 'px';
+    flagDiv.style.height = height + 'px';
+    flagDiv.style.clipPath = polygon(${clipPathPoints});
+    flagDiv.style.WebkitClipPath = polygon(${clipPathPoints});
     flagDiv.style.opacity = '0.9';
   }
 
@@ -104,12 +141,25 @@
     }
   }
 
-  map.on('zoom move', function () {
-    if (activePolygon && flagDiv) {
-      createFlagOverlay(activePolygon, 'Osentar_flag.gif');
+  polygon.on('mouseover', function() {
+    if (currentMarker) {
+      map.removeLayer(currentMarker);
+      currentMarker = null;
+    }
+    createFlagOverlay(polygon);
+  });
+
+  polygon.on('mouseout', function() {
+    removeFlagOverlay();
+  });
+
+  map.on('zoom move', function() {
+    if (flagDiv) {
+      createFlagOverlay(polygon);
     }
   });
 
+  // ✅ LOAD EXTERNAL GEOJSON FILE
   fetch('map_polygons.geojson')
     .then(res => res.json())
     .then(data => {
@@ -121,25 +171,25 @@
           opacity: 0
         }),
         onEachFeature: (feature, layer) => {
-          // Add click link if provided
+          // Optional: link on click
           if (feature.properties && feature.properties.link) {
             layer.on('click', () => {
               window.open(feature.properties.link, '_blank');
             });
           }
 
-          // Only show flag overlay for Osentar Gexico
-          if (feature.properties && feature.properties.name === 'Osentar Gexico') {
-            layer.on('mouseover', () => {
-              activePolygon = layer;
-              createFlagOverlay(layer, 'Osentar_flag.gif');
-            });
+          // Optional: hover flag effect
+          layer.on('mouseover', () => {
+            if (currentMarker) {
+              map.removeLayer(currentMarker);
+              currentMarker = null;
+            }
+            createFlagOverlay(layer);
+          });
 
-            layer.on('mouseout', () => {
-              activePolygon = null;
-              removeFlagOverlay();
-            });
-          }
+          layer.on('mouseout', () => {
+            removeFlagOverlay();
+          });
         }
       }).addTo(map);
     });
