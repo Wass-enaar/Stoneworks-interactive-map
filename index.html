@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BIG MAP with Polygon Hover Flag GIF Fill and Click Link</title>
+  <title>Map with Osentar Gexico Flag</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -10,13 +10,11 @@
     html, body {
       height: 100%;
       margin: 0;
-      padding: 0;
     }
+
     #map {
       height: 100%;
       width: 100%;
-      display: block;
-      position: relative;
     }
 
     .flag-overlay {
@@ -26,8 +24,8 @@
       background-repeat: no-repeat;
       background-position: center;
       z-index: 1000;
-      transition: opacity 0.3s ease;
       opacity: 0.9;
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
@@ -52,34 +50,19 @@
   map.fitBounds(bounds);
 
   let currentMarker = null;
-  map.on('click', function(e) {
-    const pixelX = e.latlng.lng.toFixed(0);
-    const pixelY = e.latlng.lat.toFixed(0);
-
-    if (currentMarker) {
-      map.removeLayer(currentMarker);
-    }
-
-    currentMarker = L.marker(e.latlng).addTo(map);
-    currentMarker.bindPopup(`Pixel coordinates:<br>X: ${pixelX}<br>Y: ${pixelY}`).openPopup();
-  });
-
   let flagDiv = null;
+  let activePolygon = null;
 
   function latLngToLayerPointArray(latlngs) {
-    return latlngs.map(function(latlng) {
-      return map.latLngToLayerPoint(latlng);
-    });
+    return latlngs.map(latlng => map.latLngToLayerPoint(latlng));
   }
 
   function createFlagOverlay(polygon, flagUrl) {
     const mapPane = map.getPane('overlayPane');
     const layerPoints = latLngToLayerPointArray(polygon.getLatLngs()[0]);
 
-    let minX = layerPoints[0].x;
-    let minY = layerPoints[0].y;
-    let maxX = layerPoints[0].x;
-    let maxY = layerPoints[0].y;
+    let minX = layerPoints[0].x, minY = layerPoints[0].y;
+    let maxX = minX, maxY = minY;
 
     layerPoints.forEach(pt => {
       if (pt.x < minX) minX = pt.x;
@@ -92,22 +75,20 @@
     const height = maxY - minY;
 
     const clipPathPoints = layerPoints.map(pt => {
-      const x = pt.x - minX;
-      const y = pt.y - minY;
-      return `${x}px ${y}px`;
+      return `${pt.x - minX}px ${pt.y - minY}px`;
     }).join(', ');
 
     if (!flagDiv) {
       flagDiv = L.DomUtil.create('div', 'flag-overlay', mapPane);
     }
 
-    flagDiv.style.left = minX + 'px';
-    flagDiv.style.top = minY + 'px';
-    flagDiv.style.width = width + 'px';
-    flagDiv.style.height = height + 'px';
+    flagDiv.style.left = `${minX}px`;
+    flagDiv.style.top = `${minY}px`;
+    flagDiv.style.width = `${width}px`;
+    flagDiv.style.height = `${height}px`;
+    flagDiv.style.backgroundImage = `url(${flagUrl})`;
     flagDiv.style.clipPath = `polygon(${clipPathPoints})`;
     flagDiv.style.WebkitClipPath = `polygon(${clipPathPoints})`;
-    flagDiv.style.backgroundImage = `url('${flagUrl}')`;
     flagDiv.style.opacity = '0.9';
   }
 
@@ -123,17 +104,12 @@
     }
   }
 
-  map.on('zoom move', function() {
-    if (flagDiv && flagDiv.polygon) {
-      const feature = flagDiv.feature;
-      const flagUrl = feature && feature.properties.name === 'Osentar Gexico'
-        ? 'Osentar_flag.gif'
-        : 'flag.gif';
-      createFlagOverlay(flagDiv.polygon, flagUrl);
+  map.on('zoom move', function () {
+    if (activePolygon && flagDiv) {
+      createFlagOverlay(activePolygon, 'Osentar_flag.gif');
     }
   });
 
-  // ✅ LOAD EXTERNAL GEOJSON FILE
   fetch('map_polygons.geojson')
     .then(res => res.json())
     .then(data => {
@@ -145,35 +121,25 @@
           opacity: 0
         }),
         onEachFeature: (feature, layer) => {
-          // Optional: link on click
+          // Add click link if provided
           if (feature.properties && feature.properties.link) {
             layer.on('click', () => {
               window.open(feature.properties.link, '_blank');
             });
           }
 
-          // Hover flag effect
-          layer.on('mouseover', () => {
-            if (currentMarker) {
-              map.removeLayer(currentMarker);
-              currentMarker = null;
-            }
+          // Only show flag overlay for Osentar Gexico
+          if (feature.properties && feature.properties.name === 'Osentar Gexico') {
+            layer.on('mouseover', () => {
+              activePolygon = layer;
+              createFlagOverlay(layer, 'Osentar_flag.gif');
+            });
 
-            const flagUrl = feature.properties.name === 'Osentar Gexico'
-              ? 'Osentar_flag.gif'
-              : 'flag.gif'; // fallback if needed
-
-            // Track feature for zoom/move redraw
-            if (!flagDiv) flagDiv = {};
-            flagDiv.feature = feature;
-            flagDiv.polygon = layer;
-
-            createFlagOverlay(layer, flagUrl);
-          });
-
-          layer.on('mouseout', () => {
-            removeFlagOverlay();
-          });
+            layer.on('mouseout', () => {
+              activePolygon = null;
+              removeFlagOverlay();
+            });
+          }
         }
       }).addTo(map);
     });
